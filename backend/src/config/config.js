@@ -6,7 +6,7 @@ module.exports = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '123456',
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
+    port: process.env.DB_PORT || 3307,
   },
   app: {
     port: process.env.PORT || 3000,

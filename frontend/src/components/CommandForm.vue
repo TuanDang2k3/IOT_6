@@ -16,14 +16,10 @@
         <option value="">Chọn loại lệnh</option>
         <option value="LED_ON">Bật LED</option>
         <option value="LED_OFF">Tắt LED</option>
-<<<<<<< HEAD
         <option value="FAN_ON">Bật quạt</option>
         <option value="FAN_OFF">Tắt quạt</option>
         <option value="BUZZER_ON">Bật còi</option>
         <option value="BUZZER_OFF">Tắt còi</option>
-=======
-        <option value="DISPLAY_TEXT">Hiển thị văn bản</option>
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
         <option value="READ_SENSOR">Đọc cảm biến</option>
         <option value="RESTART">Khởi động lại</option>
         <option value="CONFIGURE">Cấu hình</option>
@@ -59,7 +55,6 @@
         </div>
       </div>
     </div>
-<<<<<<< HEAD
 
     <!-- FAN_ON params -->
     <div v-if="modelValue.command === 'FAN_ON'" class="mb-3">
@@ -90,8 +85,6 @@
         </div>
       </div>
     </div>
-=======
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
     
     <!-- DISPLAY_TEXT params -->
     <div v-if="modelValue.command === 'DISPLAY_TEXT'" class="mb-3">
@@ -118,7 +111,6 @@
       </div>
     </div>
     
-<<<<<<< HEAD
     <!-- Add BUZZER_ON params -->
     <div v-if="modelValue.command === 'BUZZER_ON'" class="mb-3">
       <label class="form-label">Tham số</label>
@@ -157,8 +149,6 @@
       </div>
     </div>
 
-=======
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
     <!-- READ_SENSOR params -->
     <div v-if="modelValue.command === 'READ_SENSOR'" class="mb-3">
       <label class="form-label">Tham số</label>
@@ -169,11 +159,8 @@
             <select id="sensorType" v-model="sensorParams.sensorType" class="form-select" required>
               <option value="DHT11">DHT11 (Nhiệt độ & Độ ẩm)</option>
               <option value="DHT22">DHT22 (Nhiệt độ & Độ ẩm)</option>
-<<<<<<< HEAD
               <option value="MQ135">MQ135 (Chất lượng không khí)</option>
               <option value="RAIN">Cảm biến lượng mưa</option>
-=======
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
               <option value="BMP280">BMP280 (Áp suất & Nhiệt độ)</option>
               <option value="SOIL">Độ ẩm đất</option>
               <option value="LDR">Cảm biến ánh sáng</option>
@@ -269,7 +256,6 @@ export default {
         fontSize: 16,
         duration: 5000
       },
-<<<<<<< HEAD
       fanParams: {
         pin: 12,
         speed: 255
@@ -279,8 +265,6 @@ export default {
         duration: 1000,
         pattern: 'CONTINUOUS'
       },
-=======
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
       sensorParams: {
         sensorType: 'DHT22',
         pin: 4
@@ -317,7 +301,6 @@ export default {
             parameters: { ...this.ledOffParams }
           });
           break;
-<<<<<<< HEAD
         case 'FAN_ON':
           this.$emit('update:modelValue', {
             ...this.modelValue,
@@ -342,8 +325,6 @@ export default {
             parameters: { pin: this.buzzerParams.pin }
           });
           break;
-=======
->>>>>>> cb794464ad1afa4e67c7fcf479012826a15ec3e2
         case 'DISPLAY_TEXT':
           this.$emit('update:modelValue', {
             ...this.modelValue,

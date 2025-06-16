@@ -135,7 +135,7 @@
       <!-- Chart -->
       <div class="card mb-4">
         <div class="card-header bg-light">
-          <h5 class="mb-0">Biểu đồ dữ liệu</h5>
+          <h5 class="mb-0"></h5>
         </div>
         <div class="card-body">
           <canvas ref="chart" width="400" height="200"></canvas>
