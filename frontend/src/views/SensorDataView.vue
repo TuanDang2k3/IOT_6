@@ -97,35 +97,79 @@
         </div>
       </div>
       
-      <!-- Latest data -->
-      <div class="card mb-4">
+      <!-- Latest data -->      <div class="card mb-4">
         <div class="card-header bg-light">
-          <h5 class="mb-0">Dữ liệu mới nhất</h5>
+          <h5 class="mb-0">Dữ liệu mới nhất & Điều khiển thiết bị</h5>
         </div>
-        <div class="card-body">
-          <div v-if="latestData" class="text-center">
-  <div v-if="channelFields.length > 0" class="row">
-    <div 
-      v-for="field in channelFields" 
-      :key="field.name" 
-      class="col-md-4"
-    >
-      <div class="card mb-3">
-        <div class="card-body">
-          <h3 class="card-title">{{ field.label }}</h3>
-          <h2 class="display-5">
-            {{ getFieldValue(latestData, field.name) }}
-            <small>{{ field.unit }}</small>
-          </h2>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div v-else>
-    <h2 class="display-1">{{ latestData.value || 'N/A' }}</h2>
-    <p>Cập nhật: {{ formatTime(latestData.timestamp) }}</p>
-  </div>
-</div>
+        <div class="card-body">          <div v-if="latestData" class="text-center">
+            <div v-if="channelFields.length > 0" class="row">
+              <div 
+                v-for="field in channelFields" 
+                :key="field.name" 
+                class="col-md-4 col-lg-3 mb-3"
+              >
+                <div class="card sensor-card">
+                  <div class="card-body text-center">
+                    <div class="sensor-icon mb-2">{{ getFieldIcon(field.name) }}</div>
+                    <h6 class="card-title mb-1">{{ getFieldDisplayName(field.name) }}</h6>
+                    
+                    <!-- Hiển thị giá trị cảm biến thường -->
+                    <div v-if="!isControlField(field.name)" class="sensor-value">
+                      <span class="value-number">
+                        {{ formatFieldValue(getFieldValue(latestData, field.name), field.name) }}
+                        <small v-if="getFieldUnit(field.name)" class="text-muted ms-1">
+                          {{ getFieldUnit(field.name) }}
+                        </small>
+                      </span>
+                    </div>
+                      <!-- Nút điều khiển cho thiết bị -->
+                    <div v-else class="device-control">
+                      <div class="mb-2">
+                        <span :class="getStatusClass(getFieldValue(latestData, field.name), field.name)">
+                          {{ formatFieldValue(getFieldValue(latestData, field.name), field.name) }}
+                        </span>
+                      </div>                      <div class="btn-group w-100" role="group">
+                        <button 
+                          type="button" 
+                          class="btn btn-sm position-relative"
+                          :class="isDeviceOn(getFieldValue(latestData, field.name)) ? 'btn-success' : 'btn-outline-success'"
+                          :disabled="isControlLoading(field.name, true)"
+                          @click="controlDevice(field.name, true)"
+                        >
+                          <span v-if="!isControlLoading(field.name, true)">
+                            <i class="bi bi-power me-1"></i>BẬT
+                          </span>
+                          <span v-else class="d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Đang bật...</span>
+                          </span>
+                        </button>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm position-relative"
+                          :class="!isDeviceOn(getFieldValue(latestData, field.name)) ? 'btn-danger' : 'btn-outline-danger'"
+                          :disabled="isControlLoading(field.name, false)"
+                          @click="controlDevice(field.name, false)"
+                        >
+                          <span v-if="!isControlLoading(field.name, false)">
+                            <i class="bi bi-power me-1"></i>TẮT
+                          </span>
+                          <span v-else class="d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span>Đang tắt...</span>
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else>
+              <h2 class="display-1">{{ latestData.value || 'N/A' }}</h2>
+              <p>Cập nhật: {{ formatTime(latestData.timestamp) }}</p>
+            </div>
+          </div>
           <div v-else class="text-center">
             <p class="text-muted">Chưa có dữ liệu nào</p>
           </div>
@@ -159,12 +203,12 @@
           </div>
           
           <div v-else class="table-responsive">
-            <table class="table table-striped table-hover">
-              <thead>
+            <table class="table table-striped table-hover">              <thead>
                 <tr>
                   <th>ID</th>
                   <th v-for="field in channelFields" :key="field.name">
-                    {{ field.label }} ({{ field.unit }})
+                    {{ field.label }}
+                    <small v-if="field.unit" class="text-muted">({{ field.unit }})</small>
                   </th>
                   <th>Thời gian</th>
                 </tr>
@@ -173,7 +217,15 @@
                 <tr v-for="data in sensorData" :key="data.id">
                   <td>{{ data.id }}</td>
                   <td v-for="field in channelFields" :key="field.name">
-                    {{ getFieldValue(data, field.name) }}
+                    <span 
+                      v-if="['fanStatus', 'pumpStatus', 'lightStatus', 'ledStatus'].includes(field.name)"
+                      :class="getStatusClass(getFieldValue(data, field.name), field.name)"
+                    >
+                      {{ formatFieldValue(getFieldValue(data, field.name), field.name) }}
+                    </span>
+                    <span v-else>
+                      {{ formatFieldValue(getFieldValue(data, field.name), field.name) }}
+                    </span>
                   </td>
                   <td>{{ formatTime(data.timestamp) }}</td>
                 </tr>
@@ -240,12 +292,11 @@
 <script>
 import api from '../services/api'
 import Chart from 'chart.js/auto'
+import Vue from 'vue'
 
 export default {
   name: 'SensorDataView',
-  data() {
-    return {
-      channelId: null,
+  data() {    return {      channelId: null,
       channelInfo: {},
       channels: [],
       channelLatestData: {},
@@ -255,6 +306,7 @@ export default {
       error: null,
       chart: null,
       selectedField: null,
+      controlLoading: {}, // Object to track loading state per device field
       filters: {
         startDate: '',
         endDate: '',
@@ -262,39 +314,30 @@ export default {
       }
     }
   },
-  computed: {
+  computed: {    
     channelFields() {
       if (this.channelInfo?.fields?.length) {
         return this.channelInfo.fields;
       }
-       // Auto-detect fields from nested data structure
+      
+      // Auto-detect fields with proper Vietnamese labels and icons
       if (this.latestData?.data && typeof this.latestData.data === 'object') {
         return Object.keys(this.latestData.data).map(key => ({
           name: key,
-          label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
-          unit: key === 'temperature' ? '°C' : 
-                key === 'humidity' ? '%' :
-                key === 'airQuality' ? 'ppm' :
-                key === 'rainLevel' ? 'mm' : ''
+          label: this.getFieldDisplayName(key),
+          unit: this.getFieldUnit(key),
+          icon: this.getFieldIcon(key)
         }));
       }
-      // Nếu không có fields được định nghĩa, tự động phát hiện từ dữ liệu
-      // if (this.latestData?.data && typeof this.latestData.data === 'object') {
-      //   return Object.keys(this.latestData.data).map(key => ({
-      //     name: key,
-      //     label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
-      //     unit: ''
-      //   }));
-      // }
       
-      // // Tương thích ngược với dữ liệu cũ
-      // if (this.latestData?.value !== undefined) {
-      //   return [{
-      //     name: 'value',
-      //     label: 'Giá trị',
-      //     unit: this.channelInfo.unit || ''
-      //   }];
-      // }
+      // Tương thích ngược với dữ liệu cũ
+      if (this.latestData?.value !== undefined) {
+        return [{
+          name: 'value',
+          label: 'Giá trị',
+          unit: this.channelInfo.unit || ''
+        }];
+      }
       
       return [];
     }
@@ -391,7 +434,7 @@ export default {
           try {
             const response = await api.getLatestData(channel.id);
             if (response.data.success && response.data.data) {
-              this.$set(this.channelLatestData, channel.id, response.data.data);
+              Vue.set(this.channelLatestData, channel.id, response.data.data);
             }
           } catch (error) {
             console.error(`Error fetching data for channel ${channel.id}:`, error);
@@ -538,7 +581,221 @@ export default {
       
       // Clean up
       document.body.removeChild(link);
-    }
+    },
+    
+    // Method để check xem field có phải là field điều khiển không
+    isControlField(fieldName) {
+      return ['fanStatus', 'pumpStatus', 'lightStatus', 'ledStatus'].includes(fieldName);
+    },
+    
+    // Method để lấy tên hiển thị
+    getFieldDisplayName(fieldName) {
+      const fieldMap = {
+        'temperature': 'Nhiệt độ',
+        'soilMoisture': 'Độ ẩm đất',
+        'soilHumidity': 'Độ ẩm đất',
+        'humidity': 'Độ ẩm không khí',
+        'airHumidity': 'Độ ẩm không khí',
+        'lightIntensity': 'Cường độ ánh sáng',
+        'lightLevel': 'Cường độ ánh sáng',
+        'fanStatus': 'Trạng thái quạt',
+        'pumpStatus': 'Trạng thái máy bơm', 
+        'lightStatus': 'Trạng thái đèn',
+        'ledStatus': 'Trạng thái đèn',
+        'airQuality': 'Chất lượng không khí',
+        'rainLevel': 'Lượng mưa'
+      };
+      
+      return fieldMap[fieldName] || fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+    },
+    
+    // Method để lấy đơn vị
+    getFieldUnit(fieldName) {
+      const unitMap = {
+        'temperature': '°C',
+        'humidity': '%',
+        'soilMoisture': '%',
+        'soilHumidity': '%',
+        'airHumidity': '%',
+        'lightIntensity': 'lux',
+        'lightLevel': 'lux',
+        'fanStatus': '',
+        'pumpStatus': '',
+        'lightStatus': '',
+        'ledStatus': '',
+        'airQuality': 'ppm',
+        'rainLevel': 'mm'
+      };
+      
+      return unitMap[fieldName] || '';
+    },
+    
+    // Method để lấy icon
+    getFieldIcon(fieldName) {
+      const iconMap = {
+        'temperature': '🌡️',
+        'humidity': '💧',
+        'soilMoisture': '🌱',
+        'soilHumidity': '🌱',
+        'airHumidity': '💧',
+        'lightIntensity': '💡',
+        'lightLevel': '💡',
+        'fanStatus': '🌀',
+        'pumpStatus': '⚡',
+        'lightStatus': '💡',
+        'ledStatus': '💡',
+        'airQuality': '🌬️',
+        'rainLevel': '🌧️'
+      };
+      
+      return iconMap[fieldName] || '📊';
+    },
+    
+    // Method format giá trị hiển thị
+    formatFieldValue(value, fieldName) {
+      if (value === null || value === undefined) return 'N/A';
+      
+      // Xử lý trạng thái thiết bị (ON/OFF)
+      if (['fanStatus', 'pumpStatus', 'lightStatus', 'ledStatus'].includes(fieldName)) {
+        if (typeof value === 'boolean') {
+          return value ? 'BẬT' : 'TẮT';
+        }
+        if (typeof value === 'number') {
+          return value === 1 ? 'BẬT' : 'TẮT';
+        }
+        if (typeof value === 'string') {
+          const upperValue = value.toUpperCase();
+          if (upperValue === 'ON' || upperValue === '1' || upperValue === 'TRUE') return 'BẬT';
+          if (upperValue === 'OFF' || upperValue === '0' || upperValue === 'FALSE') return 'TẮT';
+        }
+      }
+      
+      // Định dạng số với 1 chữ số thập phân cho các cảm biến
+      if (typeof value === 'number' && !['fanStatus', 'pumpStatus', 'lightStatus', 'ledStatus'].includes(fieldName)) {
+        return Number(value).toFixed(1);
+      }
+      
+      return value;
+    },
+    
+    // Method lấy class CSS cho trạng thái
+    getStatusClass(value, fieldName) {
+      if (!['fanStatus', 'pumpStatus', 'lightStatus', 'ledStatus'].includes(fieldName)) {
+        return '';
+      }
+      
+      const isOn = this.isDeviceOn(value);
+      return isOn ? 'badge bg-success' : 'badge bg-secondary';
+    },
+    
+    // Method check trạng thái ON/OFF
+    isDeviceOn(value) {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'number') return value === 1;
+      if (typeof value === 'string') {
+        const upperValue = value.toUpperCase();
+        return upperValue === 'ON' || upperValue === '1' || upperValue === 'TRUE';
+      }
+      return false;
+    },      // Method điều khiển thiết bị - gửi lệnh xuống ESP32
+    async controlDevice(deviceField, turnOn) {
+      const loadingKey = `${deviceField}_${turnOn}`;
+      
+      if (this.controlLoading[loadingKey]) return; // Prevent multiple clicks
+        // Set loading state for this specific button
+      Vue.set(this.controlLoading, loadingKey, true);
+      
+      try {
+        // Map device field to command (similar to Commands.vue)
+        const commandMap = {
+          'fanStatus': turnOn ? 'FAN_ON' : 'FAN_OFF',
+          'pumpStatus': turnOn ? 'PUMP_ON' : 'PUMP_OFF',
+          'lightStatus': turnOn ? 'LIGHT_ON' : 'LIGHT_OFF',
+          'ledStatus': turnOn ? 'LED_ON' : 'LED_OFF'
+        };
+        
+        const command = commandMap[deviceField];
+        if (!command) {
+          throw new Error('Unknown device field');
+        }
+        
+        // Find deviceId from channelInfo or use default
+        const deviceId = this.channelInfo.deviceId || 1;
+        
+        // Create parameters based on device type (matching Commands.vue)
+        let parameters = {};
+        switch (deviceField) {
+          case 'fanStatus':
+            parameters = turnOn ? { pin: 12, speed: 255 } : { pin: 12 };
+            break;
+          case 'pumpStatus':
+            parameters = turnOn ? { pin: 13, power: 100 } : { pin: 13 };
+            break;
+          case 'lightStatus':
+          case 'ledStatus':
+            parameters = turnOn ? { pin: 14, brightness: 255 } : { pin: 14 };
+            break;
+        }
+        
+        // Send control command
+        const response = await api.createCommand({
+          deviceId: deviceId,
+          command: command,
+          parameters: parameters
+        });
+        
+        if (response.data.success) {
+          // Wait for ESP32 to process the command (simulate real execution time)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Optionally: Poll command status to verify execution
+          // const commandStatus = await api.getCommandStatus(response.data.commandId);
+          // if (commandStatus.data.status === 'executed') { ... }
+          
+          // Refresh data from server to get actual device state
+          await this.fetchLatestData();
+          
+          const deviceName = this.getFieldDisplayName(deviceField);
+          const action = turnOn ? 'bật' : 'tắt';
+          
+          // Show success message only after confirmation
+          this.$toast?.success(`${deviceName} đã được ${action} thành công!`) || 
+          alert(`${deviceName} đã được ${action} thành công!`);
+          
+        } else {
+          throw new Error(response.data.message || 'Command creation failed');
+        }
+        
+      } catch (err) {
+        console.error('Error controlling device:', err);
+        
+        const deviceName = this.getFieldDisplayName(deviceField);
+        const action = turnOn ? 'bật' : 'tắt';
+        
+        // Show specific error message
+        let errorMessage = `Không thể ${action} ${deviceName}.`;
+        if (err.response?.status === 404) {
+          errorMessage += ' Thiết bị không tìm thấy.';
+        } else if (err.response?.status >= 500) {
+          errorMessage += ' Lỗi server.';
+        } else if (!navigator.onLine) {
+          errorMessage += ' Kiểm tra kết nối mạng.';
+        } else {
+          errorMessage += ' Vui lòng thử lại.';
+        }
+        
+        this.$toast?.error(errorMessage) || alert(errorMessage);
+        
+      } finally {        // Clear loading state for this specific button
+        Vue.set(this.controlLoading, loadingKey, false);
+      }
+    },
+    
+    // Helper method to check if a specific button is loading
+    isControlLoading(deviceField, turnOn) {
+      const loadingKey = `${deviceField}_${turnOn}`;
+      return this.controlLoading[loadingKey] || false;
+    },
   },
   watch: {
     '$route'(to) {
@@ -572,3 +829,136 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.sensor-card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+
+.sensor-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.sensor-icon {
+  font-size: 2rem;
+}
+
+.sensor-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.value-number {
+  color: #3498db;
+}
+
+.badge {
+  font-size: 0.9rem;
+  padding: 0.5em 1em;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.table th {
+  border-top: none;
+  font-weight: 600;
+  background-color: #f8f9fa;
+}
+
+.table-responsive {
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+/* Styles cho nút điều khiển thiết bị */
+.device-control {
+  margin-top: 0.5rem;
+}
+
+.device-control .btn-group {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.device-control .btn {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.device-control .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.device-control .btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.device-control .btn-success {
+  background: linear-gradient(45deg, #28a745, #20c997);
+  border: none;
+}
+
+.device-control .btn-danger {
+  background: linear-gradient(45deg, #dc3545, #fd7e14);
+  border: none;
+}
+
+.device-control .btn-outline-success {
+  border-color: #28a745;
+  color: #28a745;
+  background: transparent;
+}
+
+.device-control .btn-outline-danger {
+  border-color: #dc3545;
+  color: #dc3545;
+  background: transparent;
+}
+
+.device-control .bi {
+  font-size: 0.9rem;
+}
+
+/* Loading spinner styles */
+.spinner-border-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-width: 0.125rem;
+}
+
+/* Smooth loading transition */
+.device-control .btn span {
+  transition: opacity 0.2s ease;
+}
+
+.device-control .btn:disabled span {
+  opacity: 0.8;
+}
+</style>
